@@ -20,6 +20,9 @@ setup(
         (os.path.join('share', package_name, 'rviz'), glob('rviz/*')),
         # Include all YAML configs
         (os.path.join('share', package_name, 'config'), glob('config/*')),
+
+        (os.path.join('share', package_name, 'worlds'), glob('worlds/*.sdf')),
+        (os.path.join('share', package_name, 'maps'), glob('maps/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

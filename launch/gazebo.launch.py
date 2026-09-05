@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
@@ -10,9 +10,17 @@ def generate_launch_description():
     pkg_path = get_package_share_directory('delivery_rover_description')
     xacro_file = os.path.join(pkg_path, 'urdf', 'rover.urdf.xacro')
     ekf_config_file = os.path.join(pkg_path, 'config', 'ekf.yaml')
-    slam_params_file = os.path.join(pkg_path, 'config', 'mapper_params_online_async.yaml')
     
     robot_description_config = xacro.process_file(xacro_file)
+
+    # 0. Static TF Bridge for Gazebo LiDAR scoped frame (with use_sim_time=True)
+    static_tf_node = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='gazebo_lidar_tf_bridge',
+        arguments=['0', '0', '0', '0', '0', '0', 'lidar_link', 'delivery_rover/base_footprint/gpu_lidar'],
+        parameters=[{'use_sim_time': True}]
+    )
 
     # 1. Robot State Publisher
     robot_state_publisher_node = Node(
@@ -25,12 +33,14 @@ def generate_launch_description():
         }]
     )
 
+    world_file = os.path.join(pkg_path, 'worlds', 'world_1.sdf')
+
     # 2. Gazebo World
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ),
-        launch_arguments={'gz_args': '-r empty.sdf'}.items()
+        launch_arguments={'gz_args': f'-r {world_file}'}.items()
     )
 
     # 3. Spawn Entity
@@ -41,7 +51,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 4. Parameter Bridge
+    # 4. Parameter Bridge (Configures reliable QoS for /scan so SLAM receives it)
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -55,13 +65,13 @@ def generate_launch_description():
         ],
         parameters=[{
             'use_sim_time': True,
-            'qos_overrides./scan.subscriber.reliability': 'best_effort',
-            'qos_overrides./joint_states.subscriber.reliability': 'best_effort'
+            'qos_overrides./scan.publisher.reliability': 'reliable',
+            'qos_overrides./joint_states.publisher.reliability': 'best_effort'
         }],
         output='screen'
     )
 
-    # 5. EKF Node
+    # 5. Extended Kalman Filter Node
     robot_localization_node = Node(
         package='robot_localization',
         executable='ekf_node',
@@ -70,7 +80,7 @@ def generate_launch_description():
         parameters=[ekf_config_file, {'use_sim_time': True}]
     )
 
-    # 6. RViz2
+    # 6. RViz2 Node
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -79,28 +89,12 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
 
-    # 7. SLAM Toolbox
-    slam_toolbox_launch = TimerAction(
-        period=5.0,
-        actions=[
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')
-                ),
-                launch_arguments={
-                    'use_sim_time': 'true',
-                    'slam_params_file': slam_params_file
-                }.items()
-            )
-        ]
-    )
-
     return LaunchDescription([
+        static_tf_node,
         robot_state_publisher_node,
         gazebo,
         spawn_entity,
         bridge,
         robot_localization_node,
-        rviz_node,
-        slam_toolbox_launch
+        rviz_node
     ])
