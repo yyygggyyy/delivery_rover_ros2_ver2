@@ -137,7 +137,7 @@
     <sensor name="gpu_lidar" type="gpu_lidar">
       <update_rate>8</update_rate>
       <topic>scan</topic>
-      <frame_id>lidar_link</frame_id>
+      <gz_frame_id>lidar_link</gz_frame_id>
       <lidar>
         <scan>
           <horizontal>
@@ -149,7 +149,7 @@
         </scan>
         <range>
           <min>0.30</min>
-          <max>12.0</max>
+          <max>6.0</max>
         </range>
       </lidar>
       <always_on>1</always_on>
@@ -160,6 +160,12 @@
   <gazebo reference="base_link">
     <material>Gazebo/DarkGrey</material>
   </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+  </gazebo>
+
 
   <!-- ==================== GAZEBO DRIVE & SYSTEM PLUGINS ==================== -->
   <gazebo>
@@ -185,6 +191,7 @@
       <frame_id>odom</frame_id>
       <child_frame_id>base_footprint</child_frame_id>
       <odom_publisher_frequency>30</odom_publisher_frequency>
+      <publish_odom_tf>false</publish_odom_tf>
     </plugin>
 
     <plugin filename="ignition-gazebo-joint-state-publisher-system" name="ignition::gazebo::systems::JointStatePublisher">

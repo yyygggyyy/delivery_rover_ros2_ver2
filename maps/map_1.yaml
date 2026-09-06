@@ -1,4 +1,4 @@
-image: /home/serdar/car_ws/src/delivery_rover_description/maps/map_1.pgm
+image: ./map_1.pgm
 mode: trinary
 resolution: 0.05
 origin: [-4.19, -3.95, 0]

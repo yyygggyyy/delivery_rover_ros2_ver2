@@ -1,7 +1,8 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import xacro
@@ -10,17 +11,20 @@ def generate_launch_description():
     pkg_path = get_package_share_directory('delivery_rover_description')
     xacro_file = os.path.join(pkg_path, 'urdf', 'rover.urdf.xacro')
     ekf_config_file = os.path.join(pkg_path, 'config', 'ekf.yaml')
-    
-    robot_description_config = xacro.process_file(xacro_file)
+    map_yaml_file = os.path.join(pkg_path, 'maps', 'map_1.yaml')
+    nav2_params_file = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
+    world_file = os.path.join(pkg_path, 'worlds', 'world_1.sdf')
 
-    # 0. Static TF Bridge for Gazebo LiDAR scoped frame (with use_sim_time=True)
-    static_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='gazebo_lidar_tf_bridge',
-        arguments=['0', '0', '0', '0', '0', '0', 'lidar_link', 'delivery_rover/base_footprint/gpu_lidar'],
-        parameters=[{'use_sim_time': True}]
+    # Global Launch Argument for Simulation Time
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true'
     )
+
+    robot_description_config = xacro.process_file(xacro_file)
 
     # 1. Robot State Publisher
     robot_state_publisher_node = Node(
@@ -29,11 +33,9 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'robot_description': robot_description_config.toxml(),
-            'use_sim_time': True
+            'use_sim_time': use_sim_time,
         }]
     )
-
-    world_file = os.path.join(pkg_path, 'worlds', 'world_1.sdf')
 
     # 2. Gazebo World
     gazebo = IncludeLaunchDescription(
@@ -51,7 +53,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 4. Parameter Bridge (Configures reliable QoS for /scan so SLAM receives it)
+    # 4. Parameter Bridge
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -64,9 +66,7 @@ def generate_launch_description():
             '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU'
         ],
         parameters=[{
-            'use_sim_time': True,
-            'qos_overrides./scan.publisher.reliability': 'reliable',
-            'qos_overrides./joint_states.publisher.reliability': 'best_effort'
+            'use_sim_time': use_sim_time,
         }],
         output='screen'
     )
@@ -77,7 +77,7 @@ def generate_launch_description():
         executable='ekf_node',
         name='ekf_filter_node',
         output='screen',
-        parameters=[ekf_config_file, {'use_sim_time': True}]
+        parameters=[ekf_config_file, {'use_sim_time': use_sim_time}]
     )
 
     # 6. RViz2 Node
@@ -86,15 +86,29 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         output='screen',
-        parameters=[{'use_sim_time': True}]
+        parameters=[{'use_sim_time': use_sim_time}]
+    )
+
+    # 7. Nav2 Stack
+    nav2_bringup = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'bringup_launch.py')
+        ),
+        launch_arguments={
+            'map': map_yaml_file,
+            'params_file': nav2_params_file,
+            'use_sim_time': use_sim_time,
+            'autostart': 'true'
+        }.items()
     )
 
     return LaunchDescription([
-        static_tf_node,
+        declare_use_sim_time_cmd,
         robot_state_publisher_node,
         gazebo,
         spawn_entity,
         bridge,
         robot_localization_node,
-        rviz_node
+        rviz_node,
+        nav2_bringup,
     ])
