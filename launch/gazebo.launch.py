@@ -37,7 +37,7 @@ def generate_launch_description():
         }]
     )
 
-    # 2. Gazebo World
+    # 2. Gazebo World (Headless: '-r -s' runs simulation continuously without 3D GUI)
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')

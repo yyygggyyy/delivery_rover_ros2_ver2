@@ -70,11 +70,11 @@
 
     <gazebo reference="${prefix}_wheel_link">
       <material>Gazebo/Black</material>
-      <mu1>1.0</mu1>
+      <mu1>1.5</mu1>
       <mu2>0.5</mu2>
       <fdir1>1 0 0</fdir1>
-      <kp>100000.0</kp>
-      <kd>10.0</kd>
+      <kp>1000000.0</kp>
+      <kd>100.0</kd>
       <min_depth>0.001</min_depth>
     </gazebo>
   </xacro:macro>
@@ -135,13 +135,13 @@
 
   <gazebo reference="lidar_link">
     <sensor name="gpu_lidar" type="gpu_lidar">
-      <update_rate>8</update_rate>
+      <update_rate>10</update_rate>
       <topic>scan</topic>
       <gz_frame_id>lidar_link</gz_frame_id>
       <lidar>
         <scan>
           <horizontal>
-            <samples>200</samples>
+            <samples>120</samples>
             <resolution>1</resolution>
             <min_angle>-3.14159</min_angle>
             <max_angle>3.14159</max_angle>
@@ -160,12 +160,6 @@
   <gazebo reference="base_link">
     <material>Gazebo/DarkGrey</material>
   </gazebo>
-
-  <gazebo>
-    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher"/>
-    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
-  </gazebo>
-
 
   <!-- ==================== GAZEBO DRIVE & SYSTEM PLUGINS ==================== -->
   <gazebo>
