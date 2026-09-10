@@ -11,7 +11,7 @@ def generate_launch_description():
     pkg_path = get_package_share_directory('delivery_rover_description')
     xacro_file = os.path.join(pkg_path, 'urdf', 'rover.urdf.xacro')
     ekf_config_file = os.path.join(pkg_path, 'config', 'ekf.yaml')
-    map_yaml_file = os.path.join(pkg_path, 'maps', 'map_1.yaml')
+    map_yaml_file = os.path.join(pkg_path, 'maps', 'map_2.yaml')
     nav2_params_file = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
     world_file = os.path.join(pkg_path, 'worlds', 'world_1.sdf')
 
